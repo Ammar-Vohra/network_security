@@ -1,5 +1,6 @@
 import os
 import sys
+import mlflow
 from networksecurity.exception.exception import NetworkSecurityException
 from networksecurity.logging.logger import logging
 from networksecurity.entity.artifact_entity import DataTransformationArtifact, ModelTrainerArtifact
@@ -15,6 +16,11 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier, RandomForestClassifier
 from sklearn.metrics import r2_score
 
+import dagshub
+dagshub.init(repo_owner='ammarvohra92', repo_name='network_security', mlflow=True)
+
+
+
 
 class ModelTrainer:
     def __init__(self, model_trainer_config: ModelTrainerConfig,
@@ -26,6 +32,26 @@ class ModelTrainer:
             logging.info("ModelTrainer initialized successfully.")
         except Exception as e:
             raise NetworkSecurityException(e, sys)
+        
+    def track_mlflow(self, best_model, classification_metric):
+        logging.info("Starting MLflow tracking...")
+
+        with mlflow.start_run():
+            f1_score = classification_metric.f1_score
+            precision_score = classification_metric.precision_score
+            recall_score = classification_metric.recall_score
+
+            logging.info(f"Logging metrics to MLflow: F1 Score={f1_score}, Precision={precision_score}, Recall={recall_score}")
+            mlflow.log_metric("f1 score", f1_score)
+            mlflow.log_metric("precision score", precision_score)
+            mlflow.log_metric("recall score", recall_score)
+
+            logging.info("Logging model to MLflow.")
+            mlflow.sklearn.log_model(best_model, "model")
+
+        logging.info("MLflow tracking completed.")
+
+        
 
     def train_model(self, x_train, y_train, x_test, y_test):
         logging.info("Starting model training with hyperparameter tuning.")
@@ -97,6 +123,10 @@ class ModelTrainer:
         network_model = NetworkModel(preprocessor=preprocessor, model=best_model)
         save_object(self.model_trainer_config.trained_model_file_path, object=network_model)
         logging.info(f"Trained model saved to: {self.model_trainer_config.trained_model_file_path}")
+
+        ## Tracking with MLFLOW
+        self.track_mlflow(best_model=best_model, classification_metric=classification_train_metrics)
+        self.track_mlflow(best_model=best_model, classification_metric=classification_test_metrics)
 
         model_trainer_artifact = ModelTrainerArtifact(
             trained_model_file_path=self.model_trainer_config.trained_model_file_path,
