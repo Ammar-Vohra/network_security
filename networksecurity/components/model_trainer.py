@@ -128,6 +128,9 @@ class ModelTrainer:
         self.track_mlflow(best_model=best_model, classification_metric=classification_train_metrics)
         self.track_mlflow(best_model=best_model, classification_metric=classification_test_metrics)
 
+
+        save_object("final_models/model.pkl", best_model)
+
         model_trainer_artifact = ModelTrainerArtifact(
             trained_model_file_path=self.model_trainer_config.trained_model_file_path,
             train_metric_artifact=classification_train_metrics,
