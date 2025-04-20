@@ -1,5 +1,5 @@
 # 1. Use the official Python 3.10 slim image as the base
-FROM python:3.13-slim-buster
+FROM python:3.10-slim-buster
 
 # 2. Set the working directory in the container to /app
 WORKDIR /app
